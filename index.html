@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calling List</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            background-color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background-color: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 16px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .header h1 {
+            margin: 0 0 12px 0;
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-btn {
+            width: 100%;
+            padding: 12px 16px;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .upload-btn:active {
+            background-color: #1d4ed8;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .content {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            color: #999;
+            margin-bottom: 16px;
+        }
+
+        .empty-state h2 {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+
+        .progress-card {
+            background-color: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            height: 8px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .progress-fill {
+            background-color: #10b981;
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .search-box {
+            margin-bottom: 16px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .contact-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .contact-item {
+            background-color: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: opacity 0.2s;
+        }
+
+        .contact-item.completed {
+            opacity: 0.6;
+        }
+
+        .contact-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .contact-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .contact-name {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .contact-item.completed .contact-name {
+            text-decoration: line-through;
+            color: #999;
+        }
+
+        .contact-phone {
+            margin: 4px 0 0 0;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .call-btn {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            text-decoration: none;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .call-btn:active {
+            background-color: #1d4ed8;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .save-btn {
+            width: 100%;
+            padding: 12px 16px;
+            background-color: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .save-btn:active {
+            background-color: #059669;
+        }
+
+        .upload-new-btn {
+            width: 100%;
+            padding: 12px 16px;
+            background-color: #f9f9f9;
+            color: #333;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .upload-new-btn:active {
+            background-color: #e0e0e0;
+        }
+
+        .no-results {
+            text-align: center;
+            color: #999;
+            padding: 24px 12px;
+        }
+
+        .saved-lists {
+            margin-top: 24px;
+        }
+
+        .saved-lists h3 {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+
+        .saved-list-item {
+            background-color: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .saved-list-info {
+            flex: 1;
+            text-align: left;
+        }
+
+        .saved-list-name {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .saved-list-meta {
+            margin: 4px 0 0 0;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .saved-list-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .saved-list-buttons button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .load-btn {
+            background-color: #2563eb;
+            color: white;
+        }
+
+        .delete-btn {
+            background-color: #ef4444;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>☎️ Calling List</h1>
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                📤 Upload CSV or Excel
+            </button>
+            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" onchange="handleFileUpload(event)">
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div id="emptyState" class="empty-state">
+                <div class="empty-state-icon">📭</div>
+                <h2>No calling list loaded</h2>
+                <p>Upload a CSV or Excel file to get started.<br>First column should be phone numbers.</p>
+                <div id="savedListsContainer"></div>
+            </div>
+
+            <div id="mainContent" style="display: none;">
+                <!-- Progress -->
+                <div class="progress-card">
+                    <div class="progress-header">
+                        <span>Progress</span>
+                        <span id="progressText">0 of 0 completed</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressPercent">0% complete</div>
+                </div>
+
+                <!-- Search -->
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search by name or number" onkeyup="filterContacts()">
+                </div>
+
+                <!-- Contact List -->
+                <div id="contactList" class="contact-list"></div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="save-btn" onclick="saveList()">💾 Save This List</button>
+                    <button class="upload-new-btn" onclick="document.getElementById('fileInput').click()">
+                        📤 Upload New List
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/papaparse/5.4.1/papaparse.min.js"></script>
+
+    <script>
+        let allContacts = [];
+        let completedCalls = new Set();
+        let currentFileName = '';
+
+        // Load saved lists on startup
+        displaySavedLists();
+
+        function parsePhoneNumber(value) {
+            if (!value) return null;
+            const cleaned = value.toString().replace(/[^\d+]/g, '');
+            if (cleaned.replace(/\D/g, '').length >= 7) {
+                return cleaned;
+            }
+            return null;
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            currentFileName = file.name;
+            completedCalls = new Set();
+            document.getElementById('searchInput').value = '';
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    if (file.name.endsWith('.csv')) {
+                        Papa.parse(e.target.result, {
+                            header: false,
+                            complete: function(results) {
+                                allContacts = results.data
+                                    .filter(row => row.length > 0 && row[0])
+                                    .map((row, idx) => ({
+                                        id: idx,
+                                        name: (row[1] || row[0] || 'Contact').toString().trim(),
+                                        phone: parsePhoneNumber(row[0])
+                                    }))
+                                    .filter(item => item.phone);
+
+                                displayContacts();
+                            }
+                        });
+                    } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                        allContacts = rows
+                            .filter(row => row.length > 0 && row[0])
+                            .map((row, idx) => ({
+                                id: idx,
+                                name: (row[1] || row[0] || 'Contact').toString().trim(),
+                                phone: parsePhoneNumber(row[0])
+                            }))
+                            .filter(item => item.phone);
+
+                        displayContacts();
+                    }
+                } catch (err) {
+                    alert('Error parsing file. Make sure the first column contains phone numbers.');
+                }
+            };
+
+            if (file.name.endsWith('.csv')) {
+                reader.readAsText(file);
+            } else {
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        function displayContacts() {
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            updateProgress();
+            renderContactList();
+        }
+
+        function renderContactList() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allContacts.filter(contact =>
+                contact.name.toLowerCase().includes(searchTerm) ||
+                contact.phone.includes(searchTerm)
+            );
+
+            const html = filtered.length === 0 
+                ? '<div class="no-results">No contacts match your search</div>'
+                : filtered.map(contact => `
+                    <div class="contact-item ${completedCalls.has(contact.id) ? 'completed' : ''}">
+                        <input type="checkbox" ${completedCalls.has(contact.id) ? 'checked' : ''} 
+                               onchange="toggleComplete(${contact.id})">
+                        <div class="contact-info">
+                            <p class="contact-name">${escapeHtml(contact.name)}</p>
+                            <p class="contact-phone">${contact.phone}</p>
+                        </div>
+                        <a href="tel:${contact.phone}" class="call-btn">
+                            ☎️ Call
+                        </a>
+                    </div>
+                `).join('');
+
+            document.getElementById('contactList').innerHTML = html;
+        }
+
+        function filterContacts() {
+            renderContactList();
+        }
+
+        function toggleComplete(id) {
+            if (completedCalls.has(id)) {
+                completedCalls.delete(id);
+            } else {
+                completedCalls.add(id);
+            }
+            updateProgress();
+            renderContactList();
+        }
+
+        function updateProgress() {
+            const total = allContacts.length;
+            const completed = completedCalls.size;
+            const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+            document.getElementById('progressText').textContent = `${completed} of ${total} completed`;
+            document.getElementById('progressPercent').textContent = `${percent}% complete`;
+            document.getElementById('progressFill').style.width = `${percent}%`;
+        }
+
+        function saveList() {
+            if (allContacts.length === 0) {
+                alert('No contacts to save');
+                return;
+            }
+
+            let savedLists = JSON.parse(localStorage.getItem('callingLists') || '[]');
+            const newList = {
+                id: Date.now(),
+                name: currentFileName || 'Calling List',
+                contacts: allContacts,
+                createdAt: new Date().toLocaleDateString()
+            };
+
+            savedLists.push(newList);
+            localStorage.setItem('callingLists', JSON.stringify(savedLists));
+            alert('✓ List saved!');
+            displaySavedLists();
+        }
+
+        function displaySavedLists() {
+            const savedLists = JSON.parse(localStorage.getItem('callingLists') || '[]');
+            const container = document.getElementById('savedListsContainer');
+
+            if (savedLists.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const html = `
+                <div class="saved-lists">
+                    <h3>Saved lists:</h3>
+                    ${savedLists.map(list => `
+                        <div class="saved-list-item">
+                            <div class="saved-list-info">
+                                <p class="saved-list-name">${escapeHtml(list.name)}</p>
+                                <p class="saved-list-meta">${list.contacts.length} contacts</p>
+                            </div>
+                            <div class="saved-list-buttons">
+                                <button class="load-btn" onclick="loadList(${list.id})">Load</button>
+                                <button class="delete-btn" onclick="deleteList(${list.id})">Delete</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+        function loadList(id) {
+            const savedLists = JSON.parse(localStorage.getItem('callingLists') || '[]');
+            const list = savedLists.find(l => l.id === id);
+            if (list) {
+                allContacts = list.contacts;
+                currentFileName = list.name;
+                completedCalls = new Set();
+                document.getElementById('searchInput').value = '';
+                displayContacts();
+            }
+        }
+
+        function deleteList(id) {
+            if (!confirm('Delete this list?')) return;
+            let savedLists = JSON.parse(localStorage.getItem('callingLists') || '[]');
+            savedLists = savedLists.filter(l => l.id !== id);
+            localStorage.setItem('callingLists', JSON.stringify(savedLists));
+            displaySavedLists();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
