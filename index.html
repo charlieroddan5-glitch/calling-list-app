@@ -1,557 +1,268 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Picture Call - Extract & Dial</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Picture Call</title>
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
-            min-height: 100vh;
-        }
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
-        .container {
-            max-width: 500px;
-            margin: 0 auto;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            background: white;
-        }
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+    }
 
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
+    .app {
+      max-width: 500px;
+      margin: auto;
+      min-height: 100vh;
+      background: white;
+      padding: 16px;
+    }
 
-        .header h1 {
-            font-size: 24px;
-            margin-bottom: 4px;
-        }
+    h1 {
+      text-align: center;
+      color: #2563eb;
+    }
 
-        .header p {
-            font-size: 13px;
-            opacity: 0.9;
-        }
+    video, img {
+      width: 100%;
+      border-radius: 12px;
+      background: #000;
+      margin-bottom: 12px;
+    }
 
-        .content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-            padding: 16px;
-        }
+    canvas {
+      display: none;
+    }
 
-        .section {
-            margin-bottom: 20px;
-        }
+    button, a {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 8px;
+      background: #2563eb;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+    }
 
-        .section-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 12px;
-            color: #333;
-        }
+    button.secondary {
+      background: #6b7280;
+    }
 
-        .camera-container {
-            position: relative;
-            width: 100%;
-            border-radius: 12px;
-            overflow: hidden;
-            background: #000;
-            margin-bottom: 12px;
-        }
+    .hidden {
+      display: none;
+    }
 
-        #camera {
-            width: 100%;
-            display: block;
-            aspect-ratio: 4/3;
-        }
+    .message {
+      padding: 12px;
+      margin: 12px 0;
+      border-radius: 8px;
+      background: #dbeafe;
+    }
 
-        #canvas {
-            display: none;
-        }
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
 
-        .camera-controls {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 16px;
-        }
+    .success {
+      background: #dcfce7;
+      color: #166534;
+    }
 
-        .btn {
-            flex: 1;
-            padding: 14px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
+    .number-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+      background: #f9fafb;
+    }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
+    .phone {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
 
-        .btn-primary:active {
-            transform: scale(0.98);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
-        }
-
-        .btn-secondary:active {
-            background: #e0e0e0;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #667eea;
-        }
-
-        .spinner {
-            display: inline-block;
-            width: 24px;
-            height: 24px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .message {
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 12px;
-            font-size: 14px;
-        }
-
-        .message.error {
-            background: #fee2e2;
-            color: #7f1d1d;
-            border-left: 4px solid #ef4444;
-        }
-
-        .message.success {
-            background: #d1fae5;
-            color: #065f46;
-            border-left: 4px solid #10b981;
-        }
-
-        .message.info {
-            background: #dbeafe;
-            color: #0c2340;
-            border-left: 4px solid #3b82f6;
-        }
-
-        .contacts-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .contact-item {
-            background: #f9f9f9;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            transition: all 0.2s;
-        }
-
-        .contact-item.completed {
-            opacity: 0.6;
-            background: #f0fdf4;
-        }
-
-        .contact-info {
-            flex: 1;
-        }
-
-        .contact-phone {
-            font-size: 14px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .contact-item.completed .contact-phone {
-            text-decoration: line-through;
-            color: #999;
-        }
-
-        .contact-actions {
-            display: flex;
-            gap: 8px;
-            margin-left: 8px;
-        }
-
-        .contact-actions button,
-        .contact-actions a {
-            padding: 8px 12px;
-            border: none;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-        }
-
-        .call-btn {
-            background: #3b82f6;
-            color: white;
-        }
-
-        .check-btn {
-            background: #e5e7eb;
-            color: #333;
-            width: 32px;
-            padding: 8px;
-        }
-
-        .check-btn.checked {
-            background: #10b981;
-            color: white;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: #999;
-        }
-
-        .empty-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-
-        .stat-box {
-            background: #f0f4ff;
-            border-radius: 8px;
-            padding: 12px;
-            text-align: center;
-        }
-
-        .stat-number {
-            font-size: 20px;
-            font-weight: 600;
-            color: #667eea;
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: #666;
-            margin-top: 4px;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .preview-image {
-            width: 100%;
-            border-radius: 8px;
-            margin-bottom: 12px;
-            max-height: 300px;
-            object-fit: cover;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 4px;
-            background: #e0e0e0;
-            border-radius: 2px;
-            overflow: hidden;
-            margin-bottom: 12px;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            transition: width 0.3s;
-        }
-
-        .setup-message {
-            background: #fef3c7;
-            border-left: 4px solid #f59e0b;
-            color: #92400e;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 16px;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-    </style>
+    .called {
+      opacity: 0.5;
+      text-decoration: line-through;
+    }
+  </style>
 </head>
+
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>📷 Picture Call</h1>
-            <p>Snap a list • Extract numbers • Call instantly</p>
-        </div>
+  <div class="app">
+    <h1>📷 Picture Call</h1>
 
-        <div class="content">
-            <div class="section" id="cameraSection">
-                <div class="section-title">Step 1: Take a Photo</div>
-                <div class="camera-container">
-                    <video id="camera" playsinline autoplay></video>
-                    <canvas id="canvas"></canvas>
-                </div>
-                <div class="camera-controls">
-                    <button class="btn btn-primary" onclick="capturePhoto()">
-                        📸 Capture Photo
-                    </button>
-                </div>
-            </div>
-
-            <div class="section hidden" id="previewSection">
-                <div class="section-title">Photo Preview</div>
-                <img id="preview" class="preview-image" />
-                <div class="camera-controls">
-                    <button class="btn btn-secondary" onclick="retakePhoto()">
-                        🔄 Retake Photo
-                    </button>
-                    <button class="btn btn-primary" onclick="extractNumbers()">
-                        🤖 Extract Numbers
-                    </button>
-                </div>
-            </div>
-
-            <div class="section hidden" id="extractingSection">
-                <div class="loading">
-                    <span class="spinner"></span>
-                    Analyzing image...
-                </div>
-                <p style="text-align: center; font-size: 13px; color: #999; margin-top: 12px;">
-                    This may take a few seconds
-                </p>
-            </div>
-
-            <div class="section hidden" id="resultsSection">
-                <div id="messageContainer"></div>
-                
-                <div class="stats">
-                    <div class="stat-box">
-                        <div class="stat-number" id="totalCount">0</div>
-                        <div class="stat-label">Total Numbers</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-number" id="completedCount">0</div>
-                        <div class="stat-label">Completed</div>
-                    </div>
-                </div>
-
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressBar" style="width: 0%"></div>
-                </div>
-
-                <div class="contacts-list" id="contactsList"></div>
-
-                <div class="camera-controls" style="margin-top: 20px;">
-                    <button class="btn btn-secondary" onclick="startOver()">
-                        📷 Scan Another List
-                    </button>
-                </div>
-            </div>
-        </div>
+    <div id="cameraSection">
+      <p>Take a photo of your call list.</p>
+      <video id="camera" autoplay playsinline></video>
+      <canvas id="canvas"></canvas>
+      <button onclick="capturePhoto()">📸 Capture Photo</button>
     </div>
 
-    <script>
-        let videoStream = null;
-        let capturedImage = null;
-        let contacts = [];
-        let completedCalls = new Set();
+    <div id="previewSection" class="hidden">
+      <p>Preview:</p>
+      <img id="preview" />
+      <button onclick="extractNumbers()">🤖 Extract Numbers</button>
+      <button class="secondary" onclick="retakePhoto()">Retake Photo</button>
+    </div>
 
-        window.addEventListener('load', initCamera);
+    <div id="loadingSection" class="hidden">
+      <div class="message">Scanning image... this can take a few seconds.</div>
+    </div>
 
-        async function initCamera() {
-            try {
-                videoStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' }
-                });
-                document.getElementById('camera').srcObject = videoStream;
-            } catch (err) {
-                showMessage('Camera access denied. Please enable camera permissions in your phone settings.', 'error');
-            }
+    <div id="resultsSection" class="hidden">
+      <div id="message"></div>
+      <div id="numbersList"></div>
+      <button class="secondary" onclick="startOver()">Scan Another List</button>
+    </div>
+  </div>
+
+  <script>
+    let capturedImage = null;
+    let numbers = [];
+    let calledNumbers = new Set();
+
+    window.onload = startCamera;
+
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+          audio: false
+        });
+
+        document.getElementById("camera").srcObject = stream;
+      } catch (error) {
+        showMessage("Camera permission blocked. Allow camera access in your browser.", "error");
+      }
+    }
+
+    function capturePhoto() {
+      const video = document.getElementById("camera");
+      const canvas = document.getElementById("canvas");
+      const context = canvas.getContext("2d");
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      capturedImage = canvas.toDataURL("image/jpeg", 0.9);
+
+      document.getElementById("preview").src = capturedImage;
+      document.getElementById("cameraSection").classList.add("hidden");
+      document.getElementById("previewSection").classList.remove("hidden");
+    }
+
+    function retakePhoto() {
+      capturedImage = null;
+      document.getElementById("previewSection").classList.add("hidden");
+      document.getElementById("cameraSection").classList.remove("hidden");
+    }
+
+    async function extractNumbers() {
+      if (!capturedImage) return;
+
+      document.getElementById("previewSection").classList.add("hidden");
+      document.getElementById("loadingSection").classList.remove("hidden");
+
+      try {
+        const result = await Tesseract.recognize(capturedImage, "eng");
+        const text = result.data.text;
+
+        numbers = findPhoneNumbers(text);
+
+        document.getElementById("loadingSection").classList.add("hidden");
+        document.getElementById("resultsSection").classList.remove("hidden");
+
+        if (numbers.length === 0) {
+          showMessage("No numbers found. Try a clearer photo with better lighting.", "error");
+        } else {
+          showMessage("Found " + numbers.length + " number(s).", "success");
+          displayNumbers();
         }
+      } catch (error) {
+        document.getElementById("loadingSection").classList.add("hidden");
+        document.getElementById("resultsSection").classList.remove("hidden");
+        showMessage("Error: " + error.message, "error");
+      }
+    }
 
-        function capturePhoto() {
-            const video = document.getElementById('camera');
-            const canvas = document.getElementById('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0);
-            
-            capturedImage = canvas.toDataURL('image/jpeg', 0.85);
-            
-            document.getElementById('preview').src = capturedImage;
-            document.getElementById('cameraSection').classList.add('hidden');
-            document.getElementById('previewSection').classList.remove('hidden');
-        }
+    function findPhoneNumbers(text) {
+      const matches = text.match(/(?:\+44\s?|0)(?:[\d\s\-().]){9,15}/g) || [];
 
-        function retakePhoto() {
-            document.getElementById('cameraSection').classList.remove('hidden');
-            document.getElementById('previewSection').classList.add('hidden');
-            document.getElementById('resultsSection').classList.add('hidden');
-            capturedImage = null;
-        }
+      const cleaned = matches
+        .map(number => number.replace(/[^\d+]/g, ""))
+        .map(number => {
+          if (number.startsWith("+44")) return number;
+          if (number.startsWith("44")) return "+" + number;
+          return number;
+        })
+        .filter(number => {
+          const digitsOnly = number.replace(/\D/g, "");
+          return digitsOnly.length >= 10 && digitsOnly.length <= 13;
+        });
 
-        async function extractNumbers() {
-            if (!capturedImage) return;
+      return [...new Set(cleaned)];
+    }
 
-            document.getElementById('previewSection').classList.add('hidden');
-            document.getElementById('extractingSection').classList.remove('hidden');
+    function displayNumbers() {
+      const list = document.getElementById("numbersList");
 
-            try {
-                const base64Image = capturedImage.split(',')[1];
-                
-                const response = await fetch('/api/extract-numbers', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        image: base64Image
-                    })
-                });
+      list.innerHTML = numbers.map((number, index) => {
+        const called = calledNumbers.has(number);
 
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to extract numbers');
-                }
+        return `
+          <div class="number-card">
+            <div class="phone ${called ? "called" : ""}">${number}</div>
+            <a href="tel:${number}">☎️ Call</a>
+            <button onclick="toggleCalled('${number}')">
+              ${called ? "Undo Called" : "Mark Called"}
+            </button>
+          </div>
+        `;
+      }).join("");
+    }
 
-                const data = await response.json();
-                const numbersText = data.numbers;
-                
-                contacts = numbersText
-                    .split('\n')
-                    .map(line => line.trim())
-                    .filter(line => line && /[\d+\-\s()]{7,}/.test(line))
-                    .map((phone, i) => ({
-                        id: i,
-                        phone: phone
-                    }));
+    function toggleCalled(number) {
+      if (calledNumbers.has(number)) {
+        calledNumbers.delete(number);
+      } else {
+        calledNumbers.add(number);
+      }
 
-                if (contacts.length === 0) {
-                    showMessage('No phone numbers found. Try a clearer photo.', 'error');
-                } else {
-                    showMessage(`✓ Found ${contacts.length} phone number(s)!`, 'success');
-                    displayContacts();
-                }
+      displayNumbers();
+    }
 
-            } catch (err) {
-                showMessage('Error: ' + err.message, 'error');
-            }
+    function showMessage(text, type) {
+      document.getElementById("message").innerHTML =
+        `<div class="message ${type}">${text}</div>`;
+    }
 
-            document.getElementById('extractingSection').classList.add('hidden');
-            document.getElementById('resultsSection').classList.remove('hidden');
-        }
+    function startOver() {
+      capturedImage = null;
+      numbers = [];
+      calledNumbers = new Set();
 
-        function displayContacts() {
-            const list = document.getElementById('contactsList');
-            
-            if (contacts.length === 0) {
-                list.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>No numbers found</p></div>';
-                return;
-            }
+      document.getElementById("message").innerHTML = "";
+      document.getElementById("numbersList").innerHTML = "";
 
-            list.innerHTML = contacts.map(contact => `
-                <div class="contact-item ${completedCalls.has(contact.id) ? 'completed' : ''}">
-                    <div class="contact-info">
-                        <div class="contact-phone">${contact.phone}</div>
-                    </div>
-                    <div class="contact-actions">
-                        <button class="check-btn ${completedCalls.has(contact.id) ? 'checked' : ''}" 
-                                onclick="toggleComplete(${contact.id})"
-                                title="Mark as called">
-                            ✓
-                        </button>
-                        <a href="tel:${contact.phone}" class="call-btn">☎️</a>
-                    </div>
-                </div>
-            `).join('');
-
-            updateStats();
-        }
-
-        function toggleComplete(id) {
-            if (completedCalls.has(id)) {
-                completedCalls.delete(id);
-            } else {
-                completedCalls.add(id);
-            }
-            displayContacts();
-        }
-
-        function updateStats() {
-            const total = contacts.length;
-            const completed = completedCalls.size;
-            const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-            document.getElementById('totalCount').textContent = total;
-            document.getElementById('completedCount').textContent = completed;
-            document.getElementById('progressBar').style.width = percent + '%';
-        }
-
-        function startOver() {
-            contacts = [];
-            completedCalls = new Set();
-            capturedImage = null;
-            document.getElementById('cameraSection').classList.remove('hidden');
-            document.getElementById('previewSection').classList.add('hidden');
-            document.getElementById('resultsSection').classList.add('hidden');
-            document.getElementById('messageContainer').innerHTML = '';
-        }
-
-        function showMessage(text, type) {
-            const container = document.getElementById('messageContainer');
-            container.innerHTML = `<div class="message ${type}">${text}</div>`;
-        }
-    </script>
+      document.getElementById("resultsSection").classList.add("hidden");
+      document.getElementById("cameraSection").classList.remove("hidden");
+    }
+  </script>
 </body>
 </html>
-     
-
