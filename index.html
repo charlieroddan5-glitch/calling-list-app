@@ -12,7 +12,6 @@
       margin: 0;
       font-family: Arial, sans-serif;
       background: #f3f4f6;
-      color: #111827;
     }
 
     .app {
@@ -31,7 +30,7 @@
     video, img {
       width: 100%;
       border-radius: 12px;
-      background: #000;
+      background: black;
       margin-bottom: 12px;
     }
 
@@ -53,6 +52,7 @@
       text-align: center;
       text-decoration: none;
       cursor: pointer;
+      box-sizing: border-box;
     }
 
     button.secondary {
@@ -98,6 +98,14 @@
       opacity: 0.5;
       text-decoration: line-through;
     }
+
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      margin-top: 12px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
   </style>
 </head>
 
@@ -106,10 +114,12 @@
     <h1>📷 Picture Call</h1>
 
     <div id="cameraSection">
-      <p>Take a photo of your call list.</p>
+      <p>Take a clear photo of your call list.</p>
       <video id="camera" autoplay playsinline></video>
       <canvas id="canvas"></canvas>
       <button onclick="capturePhoto()">📸 Capture Photo</button>
+      <button class="secondary" onclick="document.getElementById('fileInput').click()">Upload Photo Instead</button>
+      <input id="fileInput" type="file" accept="image/*" class="hidden" onchange="uploadPhoto(event)">
     </div>
 
     <div id="previewSection" class="hidden">
@@ -120,12 +130,17 @@
     </div>
 
     <div id="loadingSection" class="hidden">
-      <div class="message">Scanning image... this can take a few seconds.</div>
+      <div class="message">Scanning image... this can take 10–30 seconds.</div>
     </div>
 
     <div id="resultsSection" class="hidden">
       <div id="message"></div>
       <div id="numbersList"></div>
+
+      <p><strong>OCR text detected:</strong></p>
+      <textarea id="ocrTextBox"></textarea>
+      <button onclick="extractFromEditedText()">Extract From Edited Text</button>
+
       <button class="secondary" onclick="startOver()">Scan Another List</button>
     </div>
   </div>
@@ -140,13 +155,17 @@
     async function startCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
+          video: {
+            facingMode: "environment",
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
           audio: false
         });
 
         document.getElementById("camera").srcObject = stream;
       } catch (error) {
-        showMessage("Camera permission blocked. Allow camera access in your browser.", "error");
+        showMessage("Camera permission blocked. You can still upload a photo instead.", "error");
       }
     }
 
@@ -160,11 +179,27 @@
 
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      capturedImage = canvas.toDataURL("image/jpeg", 0.9);
+      capturedImage = canvas.toDataURL("image/jpeg", 1.0);
 
       document.getElementById("preview").src = capturedImage;
       document.getElementById("cameraSection").classList.add("hidden");
       document.getElementById("previewSection").classList.remove("hidden");
+    }
+
+    function uploadPhoto(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        capturedImage = e.target.result;
+        document.getElementById("preview").src = capturedImage;
+        document.getElementById("cameraSection").classList.add("hidden");
+        document.getElementById("previewSection").classList.remove("hidden");
+      };
+
+      reader.readAsDataURL(file);
     }
 
     function retakePhoto() {
@@ -180,8 +215,12 @@
       document.getElementById("loadingSection").classList.remove("hidden");
 
       try {
-        const result = await Tesseract.recognize(capturedImage, "eng");
-        const text = result.data.text;
+        const result = await Tesseract.recognize(capturedImage, "eng", {
+          tessedit_char_whitelist: "0123456789+()- ."
+        });
+
+        const text = result.data.text || "";
+        document.getElementById("ocrTextBox").value = text;
 
         numbers = findPhoneNumbers(text);
 
@@ -189,7 +228,7 @@
         document.getElementById("resultsSection").classList.remove("hidden");
 
         if (numbers.length === 0) {
-          showMessage("No numbers found. Try a clearer photo with better lighting.", "error");
+          showMessage("No numbers found. Check the OCR text box below and edit it if needed.", "error");
         } else {
           showMessage("Found " + numbers.length + " number(s).", "success");
           displayNumbers();
@@ -201,14 +240,27 @@
       }
     }
 
-    function findPhoneNumbers(text) {
-      const matches = text.match(/(?:\+44\s?|0)(?:[\d\s\-().]){9,15}/g) || [];
+    function extractFromEditedText() {
+      const text = document.getElementById("ocrTextBox").value;
+      numbers = findPhoneNumbers(text);
 
-      const cleaned = matches
+      if (numbers.length === 0) {
+        showMessage("Still no numbers found. Try typing one number manually in the text box.", "error");
+      } else {
+        showMessage("Found " + numbers.length + " number(s).", "success");
+        displayNumbers();
+      }
+    }
+
+    function findPhoneNumbers(text) {
+      const possibleNumbers = text.match(/[\d\s\-().+]{7,30}/g) || [];
+
+      const cleaned = possibleNumbers
         .map(number => number.replace(/[^\d+]/g, ""))
         .map(number => {
           if (number.startsWith("+44")) return number;
           if (number.startsWith("44")) return "+" + number;
+          if (number.startsWith("7") && number.length === 10) return "0" + number;
           return number;
         })
         .filter(number => {
@@ -222,7 +274,7 @@
     function displayNumbers() {
       const list = document.getElementById("numbersList");
 
-      list.innerHTML = numbers.map((number, index) => {
+      list.innerHTML = numbers.map(number => {
         const called = calledNumbers.has(number);
 
         return `
@@ -259,6 +311,7 @@
 
       document.getElementById("message").innerHTML = "";
       document.getElementById("numbersList").innerHTML = "";
+      document.getElementById("ocrTextBox").value = "";
 
       document.getElementById("resultsSection").classList.add("hidden");
       document.getElementById("cameraSection").classList.remove("hidden");
